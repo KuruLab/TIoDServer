@@ -1,6 +1,11 @@
 package game;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  *
@@ -10,9 +15,14 @@ public class GameSession {
     
     private String dungeonID;
     private List<Player> players;
-
-    public GameSession(String dungeonID) {
+    private Date startTime;
+    
+    public GameSession(String dungeonID) { 
         this.dungeonID = dungeonID;
+        this.players = new ArrayList<>();
+        this.startTime = new Date(System.currentTimeMillis());
+        DateFormat df = new SimpleDateFormat("dd/MM/yyyy - HH:mm", Locale.ENGLISH);
+        System.out.println("Starting a new Game Session: "+this.dungeonID+" at "+df.format(this.startTime));
     }
     
     public String getDungeonID() {

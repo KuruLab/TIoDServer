@@ -17,6 +17,7 @@ public class GameSession {
     private List<Player> players;
     private Date startTime;
     
+    
     public GameSession(String dungeonID) { 
         this.dungeonID = dungeonID;
         this.players = new ArrayList<>();

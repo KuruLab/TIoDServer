@@ -26,8 +26,7 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
     
     public DungeonServer(String id) throws RemoteException {
         this.serverList = new DungeonServerList();
-        
-        
+             
         startNewGame(id);
     }
 

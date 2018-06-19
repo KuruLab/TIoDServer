@@ -2,12 +2,12 @@ package server;
 
 import client.Notification;
 import game.GameSession;
+import game.Player;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -83,13 +83,19 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
     @Override
     public void join(Notification n, String name) throws RemoteException {
         numJogadorCont++;
-        for (int i = 0; i < game.getPlayers().size(); i++) {
+        /*for (int i = 0; i < game.getPlayers().size(); i++) {
             // ?
-        }
+        }*/
+        verifyPlayerName(name);
+        
         serverList.add(n); 
         // Mostra no servidor name e URL - so para ver a diferenca
         System.out.println("The client " + name + " joined in: \n\tURL : " + n);
         serverList.incCounter();
+        
+        Player player = new Player(name);
+        
+        this.game.getPlayers().add(player);
         
         // Informar aos outros clientes que um novo usuario esta conectado
         // Enviando mensagem O cliente ( nome xxx ) juntou-se na posicao I = (numero).
@@ -100,5 +106,13 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
             //count++;
         }
         serverList.decCounter();
+    }
+    
+    private void verifyPlayerName(String name){
+        for(Player player : this.game.getPlayers())
+            if(player.getName().equalsIgnoreCase(name)){
+                System.err.println("Warning: the name "+name+" is already taken!");
+                return;
+            }
     }
 }

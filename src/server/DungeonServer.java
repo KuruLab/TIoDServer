@@ -2,7 +2,7 @@ package server;
 
 import client.Notification;
 import game.GameSession;
-import game.Player;
+import game.CorePlayer;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -93,7 +93,7 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
         System.out.println("The client " + name + " joined in: \n\tURL : " + n);
         serverList.incCounter();
         
-        Player player = new Player(name);
+        CorePlayer player = new CorePlayer(name);
         
         this.game.getPlayers().add(player);
         
@@ -109,7 +109,7 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
     }
     
     private void verifyPlayerName(String name){
-        for(Player player : this.game.getPlayers())
+        for(CorePlayer player : this.game.getPlayers())
             if(player.getName().equalsIgnoreCase(name)){
                 System.err.println("Warning: the name "+name+" is already taken!");
                 return;

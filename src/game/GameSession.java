@@ -17,7 +17,7 @@ import map.Dungeon;
 public class GameSession {
     
     private String dungeonID;
-    private List<Player> players;
+    private List<CorePlayer> players;
     private Date startTime;
     private Dungeon dungeon;
     
@@ -46,11 +46,11 @@ public class GameSession {
         this.dungeonID = dungeonID;
     }
 
-    public List<Player> getPlayers() {
+    public List<CorePlayer> getPlayers() {
         return players;
     }
 
-    public void setPlayers(List<Player> players) {
+    public void setPlayers(List<CorePlayer> players) {
         this.players = players;
     } 
 }

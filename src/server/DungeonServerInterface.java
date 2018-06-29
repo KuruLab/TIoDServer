@@ -20,4 +20,6 @@ public interface DungeonServerInterface extends Remote {
     public void move(Notification n, String name, String s) throws RemoteException;
     
     public void look(Notification n, String name, String s) throws RemoteException;
+    
+    public void help(Notification n) throws RemoteException;
 }

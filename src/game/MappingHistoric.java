@@ -17,10 +17,8 @@
 package game;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import map.Level;
-import map.Room;
+import map.Location;
 
 /**
  *
@@ -28,17 +26,17 @@ import map.Room;
  */
 public class MappingHistoric {
     
-    private List<HashMap<Level, Room>> visitedRooms;
+    private List<Location> visitedRooms;
 
-    public MappingHistoric(CorePlayer player) {
+    public MappingHistoric() {
         this.visitedRooms = new ArrayList<>();
     } 
 
-    public List<HashMap<Level, Room>> getVisitedRooms() {
+    public List<Location> getVisitedRooms() {
         return visitedRooms;
     }
 
-    public void setVisitedRooms(List<HashMap<Level, Room>> visitedRooms) {
+    public void setVisitedRooms(List<Location> visitedRooms) {
         this.visitedRooms = visitedRooms;
     }
     

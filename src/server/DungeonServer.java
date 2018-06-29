@@ -70,8 +70,9 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
     public void talk(String name, String s) throws RemoteException {
         serverList.incCounter();
         for (Iterator i = serverList.getCollection().iterator(); i.hasNext();) {
-            Notification client = (Notification) i.next(); 
-            client.sendMessage(name, s);
+            Notification client = (Notification) i.next();
+            //if(!client.getPlayerName().equalsIgnoreCase(name))
+                client.sendMessage(name, s);
         }
         serverList.decCounter();
     }
@@ -118,7 +119,7 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
         // Enviando mensagem O cliente ( nome xxx ) juntou-se.
         for (Iterator i = serverList.getCollection().iterator(); i.hasNext();) {
             Notification client = (Notification) i.next();
-            client.joinMessage(name);;
+            client.joinMessage(name);
         }
         setupPlayer(n, name);
         
@@ -130,6 +131,7 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
         CorePlayer player = new CorePlayer(name);
         Location startLocation = this.game.getControl().getAStartPoint();
         this.game.getControl().incrementStartUsage(startLocation.getRoom());
+        this.game.getControl().updateHistoric(player, startLocation);
         player.setLocation(startLocation);
         this.game.getPlayers().add(player); 
         n.newLocationMessage(startLocation.toString());
@@ -138,13 +140,23 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
     private void verifyPlayerName(String name){
         for(CorePlayer player : this.game.getPlayers())
             if(player.getName().equalsIgnoreCase(name)){
-                System.err.println("Warning: the name "+name+" is already taken!");
+                System.err.println("Warning: the name "+name+" is already taken and this will break the game system! Enjoy the bugs!");
                 return;
             }
+    }
+    
+    private CorePlayer findPlayerByName(String name){
+        for(CorePlayer player : this.game.getPlayers())
+            if(player.getName().equalsIgnoreCase(name)){
+                return player;
+            }
+        System.err.println("Warning: It was not possible to find player "+name+"! Enjoy the bugs!");
+        return null;
     }
 
     @Override
     public void proccessCommand(Notification n, String name, String s) throws RemoteException {
+        // o bot pode entrar aqui como um controlador geral
         System.out.println("Server processing command from client " + name + ".\nCommand: "+s );
         if(s.startsWith("/leave")){
             leave(n, name);
@@ -156,30 +168,45 @@ public class DungeonServer extends UnicastRemoteObject implements Runnable, Dung
             look(n, name, s);
         }
         else if(s.startsWith("/talk")){
-            talk(name, s.substring(6));
+            // ou o bot pode entrar aqui só pra chat mesmo
+            talk(name, s.substring(6, s.length()-1));
+        }
+        else if(s.startsWith("/help")){
+            help(n);
         }
         else{
-            talk(name, s);
+            //talk(name, s.substring(0, s.length()-1));
             wrongCommand(n);
         }
     }
     
     public void wrongCommand(Notification n) throws RemoteException{
-        String help = "[Help]: Currently available commands:\n"
-                + "/talk <message> -> say something in chat\n"
-                + "/move <door> -> open the specified door\n"
-                + "/look -> take a look around and gather information\n"
-                + "/leave -> rage quit\n";
-        n.wrongCommandMessage(help);
+        n.wrongCommandMessage();
     }
 
     @Override
     public void move(Notification n, String name, String s) throws RemoteException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        CorePlayer player = findPlayerByName(name);
+        String moveTo = s.substring(6, s.length()-1);
+        String result = game.getControl().processMovement(player, moveTo);
+        n.movementMessage(result);
     }
 
     @Override
     public void look(Notification n, String name, String s) throws RemoteException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        CorePlayer player = findPlayerByName(name);
+        String info = game.getControl().getLocationInformation(player);
+        n.locationInformationMessage(info);
+    }
+    
+    @Override
+    public void help(Notification n) throws RemoteException {
+        String help = "I will help you! Currently available commands:\n"
+                + "/talk <message> -> say something in chat\n"
+                + "/move <door> -> open the specified door | /move back -> to return \n"
+                + "/look -> take a look around and gather information\n"
+                + "/leave -> rage quit\n"
+                + "/help -> display this message\n";
+        n.helpMessage(help);
     }
 }

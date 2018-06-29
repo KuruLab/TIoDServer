@@ -19,6 +19,9 @@ public class GameSession {
     private String dungeonID;
     private List<CorePlayer> players;
     private Date startTime;
+    
+    private GameControl control;
+    
     private Dungeon dungeon;
     
     public GameSession(String dungeonID) { 
@@ -28,6 +31,7 @@ public class GameSession {
         DateFormat df = new SimpleDateFormat("dd/MM/yyyy - HH:mm", Locale.ENGLISH);
         System.out.println("Starting a new Game Session: "+this.dungeonID+" at "+df.format(this.startTime));
         this.dungeon = loadDungeon();
+        this.control = new GameControl(dungeon);
     }
     
     private Dungeon loadDungeon(){
@@ -53,4 +57,28 @@ public class GameSession {
     public void setPlayers(List<CorePlayer> players) {
         this.players = players;
     } 
+
+    public Date getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(Date startTime) {
+        this.startTime = startTime;
+    }
+
+    public GameControl getControl() {
+        return control;
+    }
+
+    public void setControl(GameControl control) {
+        this.control = control;
+    }
+
+    public Dungeon getDungeon() {
+        return dungeon;
+    }
+
+    public void setDungeon(Dungeon dungeon) {
+        this.dungeon = dungeon;
+    }
 }

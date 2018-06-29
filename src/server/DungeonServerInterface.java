@@ -9,15 +9,15 @@ import client.Notification;
 //
 public interface DungeonServerInterface extends Remote {
 
+    public void proccessCommand(Notification n, String name, String s) throws RemoteException;
+    
     public void join(Notification n, String name) throws RemoteException;
 
     public void talk(String name, String s) throws RemoteException;
 
     public void leave(Notification n, String name) throws RemoteException;
 
-    //public void playerIsReady(int slot, boolean isReady) throws RemoteException;
-
-    //public void playCard(int card, int i, int j) throws RemoteException;
-
-    //public boolean isSlotEmpty(int slot) throws RemoteException;
+    public void move(Notification n, String name, String s) throws RemoteException;
+    
+    public void look(Notification n, String name, String s) throws RemoteException;
 }

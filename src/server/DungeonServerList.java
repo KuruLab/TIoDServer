@@ -5,15 +5,15 @@ import client.Notification;
 
 class DungeonServerList {
 
-    private Collection<Notification> threadList = new ArrayList<>();
+    private HashMap<String, Notification> threadList = new HashMap<>();
     private int counter = 0;
 
-    public synchronized void add(Notification item) {
+    public synchronized void add(String name, Notification item) {
         try {
             while (counter > 0) {
                 wait();
             }
-            threadList.add(item);
+            threadList.put(name, item);
         } catch (InterruptedException e) {
             System.out.println("Addition interrupted.");
         } finally {
@@ -21,12 +21,12 @@ class DungeonServerList {
         }
     }
 
-    public synchronized void remove(Notification item) {
+    public synchronized void remove(String name, Notification item) {
         try {
             while (counter > 0) {
                 wait();
             }
-            threadList.remove(item);
+            threadList.remove(name);
         } catch (InterruptedException e) {
             System.out.println("Removal interrupted.");
         } finally {
@@ -45,6 +45,6 @@ class DungeonServerList {
     }
 
     public Collection getCollection() {
-        return threadList;
+        return threadList.values();
     }
 }

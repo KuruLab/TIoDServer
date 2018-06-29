@@ -13,12 +13,18 @@ public interface Notification extends Remote {
     public void sendMessage(String name, String message) throws RemoteException;
 
     public void leaveMessage(String name) throws RemoteException;
-
-    public void newLocationMessage(String locationString) throws RemoteException;
     
     public void movementMessage(String locationString) throws RemoteException;
     
     public void locationInformationMessage(String message) throws RemoteException;
+    
+    public void lootMessage(String message) throws RemoteException;
+    
+    public void inventoryMessage(String message) throws RemoteException;
+    
+    public void attackMessage(String message) throws RemoteException;
+    
+    public void historicMessage(String message) throws RemoteException;
     
     public void wrongCommandMessage() throws RemoteException;
 

@@ -28,6 +28,7 @@ import map.Dungeon;
 import map.Level;
 import map.Location;
 import map.Room;
+import map.Stair;
 import puzzle.Condition;
 import puzzle.Symbol;
 
@@ -102,18 +103,29 @@ public class GameControl {
         return false;
     }
     
-    public String processMovement(CorePlayer player, String move){
+    public String getHistoric(CorePlayer player){
+        String result = "Let me show you your past! You have visited the following places:\n";
+        if (historics.containsKey(player)) {
+            MappingHistoric historic = historics.get(player);
+            for(Location next : historic.getVisitedRooms()){
+                result += " - "+next.toString()+". \n";
+            }
+        }
+        return result.substring(0, result.length()-1);
+    }
+    
+    public String processMovement(CorePlayer player, String arg){
+        Room room = player.getLocation().getRoom();
+        List<Door> doorList = room.getDoors();
+        
         String result = "";
-        if(move.equalsIgnoreCase("")){
-            Room room = player.getLocation().getRoom();
-            List<Door> doorList = room.getDoors();
+
+        if(arg.isEmpty()){  
             Door door = doorList.get(0);
             Location nextLocation = getNextLocation(player, room, door);
             result += normalMovement(player, room, door, nextLocation);
         }
-        else if(move.equalsIgnoreCase("random")){ 
-            Room room = player.getLocation().getRoom();
-            List<Door> doorList = room.getDoors();
+        else if(arg.equalsIgnoreCase("random")){ 
             Random random = new Random();
             int index = random.nextInt(doorList.size());
             result += "You decided to walk randomly and moved to door "+index+". ";
@@ -121,17 +133,32 @@ public class GameControl {
             Location nextLocation = getNextLocation(player, room, door);
             result += normalMovement(player, room, door, nextLocation);
         }
-        else if(move.equalsIgnoreCase("back")){
+        else if(arg.equalsIgnoreCase("back")){
             result += "You decided to move back to your previous location. ";
             Location swap = player.getLocation();
             player.setLocation(player.getPrevious());
             player.setPrevious(swap);
         }
+        else if(arg.equalsIgnoreCase("stair")){
+            boolean hasStair = false;
+            for(Symbol symbol : room.getSymbols()){
+                if(symbol.isStair()){
+                    hasStair = true;
+                    break;
+                }
+            }
+            if(hasStair){
+                result += "You decided to take the stairway. ";
+                Location nextLocation = getStairwayNextLocation(player, room);
+                result += stairwayMovement(player, room, nextLocation);
+            }
+            else{
+                result += "I don't remember mentioning any stairs. ";
+            }
+        }
         else{
             try{
-                int index = Integer.parseInt(move);
-                Room room = player.getLocation().getRoom();
-                List<Door> doorList = room.getDoors();
+                int index = Integer.parseInt(arg);
                 try{
                     Door door = doorList.get(index);
                     Location nextLocation = getNextLocation(player, room, door);
@@ -163,6 +190,25 @@ public class GameControl {
         return nextLocation;
     }
     
+    public Location getStairwayNextLocation(CorePlayer player, Room room){
+        Level currentLevel = player.getLocation().getLevel();
+        for(Stair stair : currentLevel.getStairs()){
+            if(stair.getFrom().getId() == room.getId() && stair.getLower().getId() == currentLevel.getId()){
+                return new Location(dungeon, stair.getUpper(), stair.getTo());
+            }
+            if(stair.getFrom().getId() == room.getId() && stair.getUpper().getId() == currentLevel.getId()){
+                return new Location(dungeon, stair.getLower(), stair.getTo());
+            }
+            if(stair.getTo().getId() == room.getId() && stair.getLower().getId() == currentLevel.getId()){
+                return new Location(dungeon, stair.getUpper(), stair.getFrom());
+            }
+            if(stair.getTo().getId() == room.getId() && stair.getUpper().getId() == currentLevel.getId()){
+                return new Location(dungeon, stair.getLower(), stair.getFrom());
+            }
+        }
+        return null;
+    }
+    
     public String normalMovement(CorePlayer player, Room room, Door door, Location nextLocation) {
         String result = "";
         Room nextRoom = nextLocation.getRoom();
@@ -178,21 +224,7 @@ public class GameControl {
                 //result += "You walked towards room "+nextRoom.getId()+". ";
             }
             door.setOpen(true);
-            System.out.println(nextRoom.getDoors().get(nextRoom.getDoors().indexOf(door)).isOpen());
-
-            player.setPrevious(player.getLocation());
-            player.setLocation(nextLocation);
-
-            result += "You are now inside room " + nextRoom.getId() + ". ";
-
-            if (isVisited(player, nextLocation)) {
-                result += "As you can see, you have been here before. ";
-            } else {
-                result += "This is your first time here. "
-                        + "Take a /look around for more information. ";
-            }
-
-            updateHistoric(player, nextLocation);
+            result += postMovementProcessing(player, nextLocation, nextRoom);
         } else {
             //Condition condition = door.getCondition();
             result += "I'm sorry, but you can't open this door. "
@@ -201,12 +233,46 @@ public class GameControl {
         return result;
     }
     
+    public String stairwayMovement(CorePlayer player, Room room, Location nextLocation){
+        String result = "";
+        Room nextRoom = nextLocation.getRoom();
+        if (canMoveTo(player, nextLocation)) {
+            result += "You walked towards a new level. It is called \"" + nextLocation.getLevel().getId()+"\". ";            
+            result += postMovementProcessing(player, nextLocation, nextRoom);
+        } else {
+            //Condition condition = door.getCondition();
+            result += "I'm sorry, but you can't move to the next location. "
+                    + "You don't have the requirements. ";
+        }
+        return result;
+    }
+    
+    public String postMovementProcessing(CorePlayer player, Location nextLocation, Room nextRoom) {
+        player.setPrevious(player.getLocation());
+        player.setLocation(nextLocation);
+
+        String result = "You are now inside room " + nextRoom.getId() + ". ";
+
+        if (isVisited(player, nextLocation)) {
+            result += "As you can see, you have been here before. ";
+        } else {
+            if (nextRoom.getFirstTimeText() != null) {
+                result += nextRoom.getFirstTimeText() + " ";
+            }
+            result += "This is your first time here. " //+ "Take a /look around for more information. "
+                    ;
+        }
+        updateHistoric(player, nextLocation);
+        
+        return result;
+    }
+    
     // check if the player have the necessary keylevel
     public boolean canMoveTo(CorePlayer player, Location location){
         Room room = location.getRoom();
         Condition condition = room.getCondition();
         if(condition.getKeyLevel() > 0){
-            List<Symbol> keyList = player.getIventory().getSymbols();
+            List<Symbol> keyList = player.getInventory().getSymbols();
             boolean hasKey = false;
             for(Symbol key : keyList){
                 hasKey = hasKey || (condition.getKeyLevel() <= key.getValue());
@@ -216,94 +282,148 @@ public class GameControl {
         else return true;
     }
     
-    public String getLocationInformation(CorePlayer player){
+    public String getLocationInformation(CorePlayer player) {
         Room room = player.getLocation().getRoom();
-        Room prev; 
+        Room prev;
         Location prevLoc = player.getPrevious();
-        
-        if(prevLoc == null)
+
+        if (prevLoc == null) {
             prev = room;
-        else
+        } else {
             prev = prevLoc.getRoom();
-            
-        String result = "You are currently at the room "+room.getId()+". ";
-        result += "It's coordinates are "+Arrays.toString(room.getCoord())+". ";
-        if(room.getLore() != null)
+        }
+
+        String result = "You are currently at the room " + room.getId() + ". ";
+        result += "It's coordinates are " + Arrays.toString(room.getCoord()) + ". ";
+        if (room.getLore() != null) {
             result += room.getLore();
-        
+        }
+        if (room.getInfo()!= null) {
+            result += room.getInfo();
+        }
+
+        for (Symbol symbol : room.getSymbols()) {
+            if (symbol.isKey()) {
+                result += "This room contains the " + symbol.toString() + " key! ";
+            } else if (symbol.isSwitch()) {
+                result += "This room contains a switch! ";
+            } else if (symbol.isBoss()) {
+                result += "There is an evil boss inside, guarding it, beware! ";
+            } else if (symbol.isStart()) {
+                result += "Looks like this is the entrance of this level. ";
+            } else if (symbol.isStair()) {
+                result += "There are stairs to another level. ";
+            } else if (symbol.isNothinig()) {
+                result += "There is nothing else here. ";
+            } else {
+                result += "Something is wrong with this map! ";
+            }
+        }
+        if (room.getDoors().size() < 2 && prev.getId() != room.getId()) {
+            result += "This room is a dead end. The only door is the one from where you came from. ";
+        } else {
+            if (room.getDoors().size() <= 2) {
+                result += "There is just a single door ahead.\n";
+            } else {
+                result += "There are " + (room.getDoors().size() - 1) + " doors ahead:\n";
+            }
+            for (int i = 0; i < room.getDoors().size(); i++) {
+                Door door = room.getDoors().get(i);
+                if (!( // we don't want the room from where we came from
+                    (door.getA().getId() == room.getId() && door.getB().getId() == prev.getId())
+                 || (door.getA().getId() == prev.getId() && door.getB().getId() == room.getId())))
+                {
+                    if (door.getA().getId() == room.getId()) {
+                        result += "The door " + i + " leads to the room " + door.getB().getId() + " ";
+                    } else {
+                        result += "The door " + i + " leads to the room " + door.getA().getId() + " ";
+                    }
+
+                    if (door.isOpen()) {
+                        result += "and it is open. ";
+                    } else {
+                        if (door.getCondition().getKeyLevel() > 0) {
+                            result += "and it is locked. ";
+                        } else {
+                            result += "and it is closed. ";
+                        }
+                    }
+
+                } else {
+                    result += "You came from door " + i + ". ";
+                }
+                if (i < room.getDoors().size() - 1) {
+                    result += "\n";
+                }
+            }
+        }
+        return result;
+    }
+
+    public String processLoot(CorePlayer player){
+        Location location = player.getLocation();
+        Room room = location.getRoom();
+        Inventory inventory = player.getInventory();
+        String result = "You decided to loot the room. ";
+        boolean loot = false;
         for(Symbol symbol : room.getSymbols()){
             if(symbol.isKey()){
-                result += "This room contains the "+symbol.toString()+" key! ";
+                result += "You got the "+symbol.toString()+" key. ";
+                inventory.getSymbols().add(symbol);
+                room.getSymbols().remove(symbol);
+                room.setInfo(room.getInfo().concat("This room contains an open chest, but it is empty! "));
+                loot = true;
             }
-            else if(symbol.isSwitch()){
-                result += "This room contains a switch! ";
-            }
-            else if(symbol.isBoss()){
-                result += "There is an evil boss inside, guarding it, beware! ";
-            }
-            else if(symbol.isStart()){
-                result += "Looks like this is the entrance of this level. ";
-            }
-            else if(symbol.isStair()){
-                result += "There are stairs to another level. ";
-            }
-            else if(symbol.isNothinig()){
-                result += "There is nothing else here. ";
-            }
-            else result += "Something is wrong with this map! ";
         }
-        if(room.getDoors().size() < 2 && prev.getId() != room.getId()){
-            result += "This room is a dead end. The only door is the one from where you came from. ";
+        if(!loot){
+            result += "However, there is nothing useful here. ";
+        }
+        return result;
+    }
+
+    public String getInventory(CorePlayer player) {
+        String result = "You decided to take a look in your bag";
+        Inventory inventory = player.getInventory();
+        if(inventory.getSymbols().isEmpty()){
+            result += ", but there is nothing inside! Seriously? ";
         }
         else{
-            if(room.getDoors().size() <= 2){
-                result += "There is just a single door ahead. ";
-                for(Door door : room.getDoors()){
-                    if( !( // we don't want the room from where we came from
-                        (door.getA().getId() == room.getId() && door.getB().getId() == prev.getId()) 
-                    ||  (door.getA().getId() == prev.getId() && door.getB().getId() == room.getId()))){
-                        if(door.getA().getId() == room.getId())
-                            result += "It leads to the room "+door.getB().getId()+" ";
-                        else
-                            result += "It leads to the room "+door.getA().getId()+" ";
-                        if(door.isOpen())
-                            result += "and it is open. ";
-                        else{
-                            if(door.getCondition().getKeyLevel() > 0)
-                                result += "and it is locked. ";
-                            else
-                                result += "and it is closed. ";
-                        }
-                    }
-                }
-            }
-            else{
-                result += "There are "+(room.getDoors().size()-1)+" doors ahead:\n";
-                for(int i = 0; i < room.getDoors().size(); i++){
-                    Door door = room.getDoors().get(i);
-                    if( !( // we don't want the room from where we came from
-                        (door.getA().getId() == room.getId() && door.getB().getId() == prev.getId()) 
-                    ||  (door.getA().getId() == prev.getId() && door.getB().getId() == room.getId()))){
-                        if(door.getA().getId() == room.getId())
-                            result += "The door "+i+" leads to the room "+door.getB().getId()+" ";
-                        else
-                            result += "The door "+i+" leads to the room "+door.getA().getId()+" ";
-                        
-                        if(door.isOpen())
-                            result += "and it is open. ";
-                        else{
-                            if(door.getCondition().getKeyLevel() > 0)
-                                result += "and it is locked. ";
-                            else
-                                result += "and it is closed. ";
-                        }
-                        if(i < room.getDoors().size() - 1)
-                        result += "\n";
-                    }
-                }
+            result += ". You have found the following:\n";
+            for(Symbol symbol : inventory.getSymbols()){
+                result += " - ";
+                if(symbol.isKey())
+                    result += "Key ";
+                result += symbol.toString()+".\n";
             }
         }
-        
+        result += "Type /loot to get something!";
+        return result;
+    }
+    
+    public String attack(CorePlayer player, String arg){
+        Location location = player.getLocation();
+        Room room = location.getRoom();
+        String result = "Your sword is sliding against";
+        boolean hasBoss = false;
+        for(Symbol symbol : room.getSymbols()){
+            if(symbol.isBoss()){
+                hasBoss = true;
+                room.getSymbols().remove(symbol);
+                room.setInfo(room.getInfo().concat(
+                        "There is blood everywhere and an evil creature prostrated on the ground! "
+                      + "This is the boss! Luckly, he is dead! "));
+                break;
+            }
+        }
+        if(hasBoss){
+            result += " the boss face. You cut-off his head! "
+                    + "He is dead now and you are free to loot his treasure (if there is one)! "
+                    + "Well done! ";
+        }
+        else{
+            result += " the air. I'm not sure what you are trying to do, "
+                    + "but I presume you are just training your movements. Anyway, better safe than sorry! ";
+        }
         return result;
     }
 }
